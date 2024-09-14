@@ -1,0 +1,190 @@
+/* ----------------------------------------------------------------------------
+  Company:    UFABC - Engenharia de Informação - CECS
+  Engineer:   João Ranhel  
+  Create Date:    2024/08/08
+  
+  Design Name:    Praticas de Eletrônica Digital (ESTI002-17)
+  Module Name:    game "intercepte"
+  Language:       Verilog-2001
+  
+Descrição: 
+Este módulo estrutura o projeto intercepte, com cronômetro e LEDs do KIT DE2-115, 
+tendo como entrada botões: reset, start, pause, fire, e 8 chaves. As saídas são
+os 18 LVMs, os 8 LVDs e displays: 4 dig p/ SCORE e 2 dig p/ CRONOMETRO
+Se você quiser utilizar esse template os pinos estão descritos em intercepte_pinos.csv
+-----------------------------------------------------------------------------*/
+
+module intercepte 
+  (
+  input clk50, reset,                  // inputs: clk_50 MHz, reset,
+  input start, pause, fire,            // in: botões do game
+  input [NCHV-1:0] ChvCode,            // in chave código bits para shift
+  output LEDGameOver,                  // led timeout (fim do game - ldGreen[8])
+  output LEDPause1, LEDPause2,         // led pause no game (DISP4/5 seg 'g')
+  output reg [SZGR-1:0] SR_GR,         // leds verde para mísseis
+  output reg [SZRD-1:0] SR_RD,         // led vermelhos 
+  output [6:0] DscM, DscC, DscD, DscU, // score 7 segs do display
+  output reg [6:0] DcrD, DcrU              // cronometro 7 segs dos displays
+  ); 
+  
+  parameter SZRD = 18;                 // qtde de leds vermelhos
+  parameter SZGR = 8;                  // qtde de leds verdes
+  parameter TIME_DEB = 32'd10_000_000; // tempo de debouncing em 200 ms
+  parameter TIME_FIRE = 32'd5_000_000; // tempo do strobe do fire = 100 ms
+  parameter TIPO_DISPLAY = 0;          // =0:ânodo =1:cátodo comum
+  parameter NCHV = 8;                  // num bits entrada regs
+
+// debouncing para as 4 keys de entrada do game
+  reg [31:0] Cnt_start, Cnt_pause, Cnt_fire;
+  reg stb_start, stb_pause, stb_fire;
+  
+  always @(posedge clk50 or negedge reset) // debouncing da tecla start
+  begin
+    if (reset=='b0)                    // no reset 
+      begin
+      Cnt_start <= TIME_DEB;           // recomeça contador com TIME_DEB
+      stb_start <= 'b0;                // zera sinal stb_start
+      end
+    else                               // saiu do reset
+      begin
+      if ((start=='b0) && (stb_start=='b0)) // descida do start
+        stb_start <= 'b1;              // faz o stb_start = 1
+      else if ((stb_start=='b1) && (Cnt_start>32'b0)) // stb=1, cont>0?
+        Cnt_start <= Cnt_start-1;      // só decrementa contador 
+      else if ((start=='b1) && (Cnt_start==32'b0)) // botão voltou p/ '1'?
+        begin
+        Cnt_start <= TIME_DEB;         // carrega timer com TIME_DEB
+        stb_start <= 'b0;              // retorna stb_fire = 0
+        end
+      end
+  end
+
+  always @(posedge clk50 or negedge reset) // debouncing da tecla pause
+  begin
+    if (reset=='b0)                    // no reset 
+      begin
+      Cnt_pause <= TIME_DEB;           // recomeça contador com TIME_DEB
+      stb_pause <= 'b0;                // zera sinal stb_pause
+      end
+    else                               // saiu do reset
+      begin
+      if ((pause=='b0) && (stb_pause=='b0)) // descida do pause
+        stb_pause <= 'b1;              // faz o stb_pause = 1
+      else if ((stb_pause=='b1) && (Cnt_pause>32'b0)) // stb=1, cont>0?
+        Cnt_pause <= Cnt_pause-1;      // só decrementa contador
+      else if ((pause=='b1) && (Cnt_pause==32'b0)) // botão voltou p/ '1'?
+        begin
+        Cnt_pause <= TIME_DEB;         // carrega timer com TIME_DEB
+        stb_pause <= 'b0;              // retorna stb_fire = 0
+        end
+      end
+  end
+  
+  
+  // esse circuito mantém o 'stb_fire' = 1 por 100 ms
+  always @(posedge clk50 or negedge reset) // debouncing da tecla fire
+  begin
+    if (reset=='b0)                    // no reset 
+      begin
+      Cnt_fire <= TIME_FIRE;           // recomeça contador com TIME_FIRE
+      stb_fire <= 'b0;                 // zera sinal stb_fire
+      end
+    else                               // saiu do reset
+      begin
+      if ((fire=='b0) && (stb_fire=='b0)) // descida do fire
+        stb_fire <= 'b1;               // faz o stb_fire = 1
+      else if ((stb_fire=='b1) && (Cnt_fire>32'b0)) // stb=1, cont>0?
+        Cnt_fire <= Cnt_fire-1;        // só decrementa contador   
+      else if ((fire=='b1) && (Cnt_fire==32'b0)) // botão voltou p/ '1'?
+        begin
+        Cnt_fire <= TIME_FIRE;         // carrega timer com TIME_FIRE
+        stb_fire <= 'b0;               // retorna stb_fire = 0
+        end
+      end
+  end  
+  
+
+  // os sinais de clock que o game precisa:
+  wire clk1Hz;
+  wire clk10Hz;
+  wire clk5Hz;
+  
+// instancia divisor (clk_div) e atualiza o par (kte NclkDIV) do modulo
+clk_div #( .NclkDIV (24_999_999)) ckDv1// inst clk_div, redefine NclkDIV
+  (                                    // mapear ports do módulo
+  .clk    ( clk50 ),                   // clk daquele mod liga no clk50 daqui
+  .reset  ( reset),                    // reset de lá em reset daqui
+  .clkOut ( clk1Hz )                   // clkOut de lá em clk10Hz daqui
+  );
+  
+ clk_div_10 #( .NclkDIV (249_999_999)) ckDv10// inst clk_div, redefine NclkDIV
+  (                                    // mapear ports do módulo
+  .clk    ( clk50 ),                   // clk daquele mod liga no clk50 daqui
+  .reset  ( reset),                    // reset de lá em reset daqui
+  .clkOut ( clk10Hz )                   // clkOut de lá em clk10Hz daqui
+  );
+  
+  clk_div_5 #( .NclkDIV (125_999_999)) ckDv5// inst clk_div, redefine NclkDIV
+  (                                    // mapear ports do módulo
+  .clk    ( clk50 ),                   // clk daquele mod liga no clk50 daqui
+  .reset  ( reset),                    // reset de lá em reset daqui
+  .clkOut ( clk5Hz )                   // clkOut de lá em clk10Hz daqui
+  );
+  
+reg [3:0] crU;
+reg [3:0] crD; 
+
+always@(clk1Hz or reset)
+	begin
+		if(reset)
+			begin
+				crU <= 9;
+				crD <= 5;
+			end
+		else if(crU > 4'd0)
+			begin
+				crU = crU-1'b1;
+			end
+		else if(crU == 4'd0)
+			begin
+				crD = crD - 1'b1;
+				crU = 9;
+			end
+	end
+
+always @(posedge clk1Hz)
+	begin
+      case(crU)                    
+      4'b0000: DcrU <= 7'b1000000;
+      4'b0001: DcrU <= 7'b1111001;
+      4'b0010: DcrU <= 7'b0100100;
+      4'b0011: DcrU <= 7'b0110000;
+      4'b0100: DcrU <= 7'b0011001;
+      4'b0101: DcrU <= 7'b0010010;
+      4'b0110: DcrU <= 7'b0000010;
+      4'b0111: DcrU <= 7'b1111000;
+      4'b1000: DcrU <= 7'b0000000;
+      4'b1001: DcrU <= 7'b0010000;
+      default: DcrU <= 7'b0111111;
+      endcase
+	end
+   
+
+always @(posedge clk1Hz)
+	begin
+      case(crD)                    
+      4'b0000: DcrD <= 7'b1000000;
+      4'b0001: DcrD <= 7'b1111001;
+      4'b0010: DcrD <= 7'b0100100;
+      4'b0011: DcrD <= 7'b0110000;
+      4'b0100: DcrD <= 7'b0011001;
+      4'b0101: DcrD <= 7'b0010010;
+      4'b0110: DcrD <= 7'b0000010;
+      4'b0111: DcrD <= 7'b1111000;
+      4'b1000: DcrD <= 7'b0000000;
+      4'b1001: DcrD <= 7'b0010000;
+      default: DcrD <= 7'b0111111;
+      endcase
+	end 
+
+endmodule

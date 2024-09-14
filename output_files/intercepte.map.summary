@@ -1,0 +1,14 @@
+Analysis & Synthesis Status : Successful - Fri Sep 13 11:07:56 2024
+Quartus Prime Version : 23.1std.0 Build 991 11/28/2023 SC Lite Edition
+Revision Name : intercepte
+Top-level Entity Name : intercepte
+Family : Cyclone IV E
+Total logic elements : 1,691
+    Total combinational functions : 1,663
+    Dedicated logic registers : 315
+Total registers : 315
+Total pins : 84
+Total virtual pins : 0
+Total memory bits : 0
+Embedded Multiplier 9-bit elements : 0
+Total PLLs : 0

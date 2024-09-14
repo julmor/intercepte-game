@@ -1,0 +1,22 @@
+
+State Machine - |intercepte|stt_fired
+Name stt_fired.11 stt_fired.10 stt_fired.01 stt_fired.00 
+stt_fired.00 0 0 0 0 
+stt_fired.01 0 0 1 1 
+stt_fired.10 0 1 0 1 
+stt_fired.11 1 0 0 1 
+
+State Machine - |intercepte|estados_score
+Name estados_score.00 estados_score.10 estados_score.01 
+estados_score.00 0 0 0 
+estados_score.01 1 0 1 
+estados_score.10 1 1 0 
+
+State Machine - |intercepte|Estado
+Name Estado.GAMEOVER Estado.PAUSE2 Estado.PAUSE1 Estado.PAUSE Estado.JOGANDO Estado.INICIAL 
+Estado.INICIAL 0 0 0 0 0 0 
+Estado.JOGANDO 0 0 0 0 1 1 
+Estado.PAUSE 0 0 0 1 0 1 
+Estado.PAUSE1 0 0 1 0 0 1 
+Estado.PAUSE2 0 1 0 0 0 1 
+Estado.GAMEOVER 1 0 0 0 0 1 

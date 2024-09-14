@@ -1,0 +1,3 @@
+Warning (10268): Verilog HDL information at intercepte.v(50): always construct contains both blocking and non-blocking assignments File: C:/Users/ufabc/Documents/EDM-PROJETO-FINAL/intercepte.v Line: 50
+Warning (10268): Verilog HDL information at intercepte.v(298): always construct contains both blocking and non-blocking assignments File: C:/Users/ufabc/Documents/EDM-PROJETO-FINAL/intercepte.v Line: 298
+Info (10281): Verilog HDL Declaration information at intercepte.v(4): object "pause" differs only in case from object "PAUSE" in the same scope File: C:/Users/ufabc/Documents/EDM-PROJETO-FINAL/intercepte.v Line: 4
